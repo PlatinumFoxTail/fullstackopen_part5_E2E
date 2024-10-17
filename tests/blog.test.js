@@ -50,7 +50,7 @@ describe('Blog app', () => {
       await expect(loggedInUser).toBeVisible()
     })
           
-    test('a new blog can be created', async ({ page }) => {
+    test('creating a new blog', async ({ page }) => {
       await page.click('button:has-text("new blog")')
       
       await page.fill('input[placeholder="title"]', 'The Best Blog')
@@ -59,7 +59,7 @@ describe('Blog app', () => {
       
       await page.click('button[type="submit"]')
       
-      const newBlog = await page.locator('text=The Best Blog Mr. Perfect')
+      const newBlog = await page.locator('.blog-summary').filter({ hasText: 'The Best Blog Mr. Perfect' }).first()
       await expect(newBlog).toBeVisible()
     })
   })
