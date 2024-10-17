@@ -62,5 +62,26 @@ describe('Blog app', () => {
       const newBlog = await page.locator('.blog-summary').filter({ hasText: 'The Best Blog Mr. Perfect' }).first()
       await expect(newBlog).toBeVisible()
     })
+
+    test('liking a blog possible', async ({ page }) => {
+      await page.click('button:has-text("new blog")')
+      await page.fill('input[placeholder="title"]', 'Next Best Blog')
+      await page.fill('input[placeholder="author"]', 'Mr. Almost Perfect')
+      await page.fill('input[placeholder="url"]', 'www.blog2.com')
+      await page.click('button[type="submit"]')
+        
+      const viewButton = await page.locator('button', { hasText: 'view' }).first()
+      await viewButton.click()
+  
+      const likeButton = await page.locator('button', { hasText: 'like' }).first()
+      const likesCount = await page.locator('.blog-likes').first()
+        
+      const initialLikesText = await likesCount.innerText()
+      const initialLikes = parseInt(initialLikesText.split(' ')[0])
+  
+      await likeButton.click()
+      
+      await expect(likesCount).toContainText(`${initialLikes + 1} likes`)
+    })
   })
 })
