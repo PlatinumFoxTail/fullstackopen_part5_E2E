@@ -69,6 +69,82 @@ test('remove button not seen by user, that did not create the blog', async ({ pa
   await expect(removeButton).toHaveCount(0)
 })
 
+test('blogs in descending order', async ({ page, request }) => {
+  //resetting the database
+  await request.post('http://localhost:3003/api/testing/reset')
+
+  //mluukkai user created
+  await request.post('http://localhost:3003/api/users', {
+    data: {
+      name: 'Matti Luukkainen',
+      username: 'mluukkai',
+      password: 'salainen'
+    }
+  })
+
+  //mluukkai loggin in
+  await page.goto('http://localhost:5173')
+  await page.fill('input[name="Username"]', 'mluukkai')
+  await page.fill('input[name="Password"]', 'salainen')
+  await page.click('button[type="submit"]')
+
+  //creating three blogs
+  const blogs = [
+    { title: '1st Blog', author: 'Author 1', url: 'www.first.com' },
+    { title: '2nd Blog', author: 'Author 2', url: 'www.second.com' },
+    { title: '3rd Blog', author: 'Author 3', url: 'www.third.com' }
+  ]
+
+  for (const blog of blogs) {
+    await page.click('button:has-text("new blog")')
+    await page.fill('input[placeholder="title"]', blog.title)
+    await page.fill('input[placeholder="author"]', blog.author)
+    await page.fill('input[placeholder="url"]', blog.url)
+    await page.click('button[type="submit"]')
+  }
+
+  //adding likes to the blogs
+  const blogsToLike = [
+    { title: '1st Blog', likes: 1 },
+    { title: '2nd Blog', likes: 2 },
+    { title: '3rd Blog', likes: 3 }
+  ]
+
+  for (const blog of blogsToLike) {
+    const blogLocator = await page.locator('.blog').filter({ hasText: blog.title }).first()
+    await blogLocator.locator('button:has-text("view")').click()
+
+    const likeButton = blogLocator.locator('button:has-text("like")')
+    for (let i = 0; i < blog.likes; i++) {
+      await likeButton.click()
+      await page.waitForTimeout(500)
+    }
+  }
+
+  //checking order by likes
+  const blogElements = await page.locator('.blog')
+  const blogTitles = await blogElements.allTextContents()
+
+  //extracting likes count from each blog's text
+  const blogLikes = await blogElements.evaluateAll((elements) => {
+    return elements
+      .map(element => {
+        const likeElement = element.querySelector('.blog-likes')
+        if (likeElement) {  
+          const likeText = likeElement.textContent
+          const likeNumber = parseInt(likeText.split(' ')[0], 10)
+          return likeNumber
+        }
+        return null
+      })
+      .filter(like => like !== null)
+  })
+
+  //asserting ordering
+  for (let i = 0; i < blogLikes.length - 1; i++) {
+    expect(blogLikes[i]).toBeGreaterThanOrEqual(blogLikes[i + 1])
+  }
+})
 
 describe('Blog app', () => {
   beforeEach(async ({ page, request }) => {
