@@ -5,7 +5,7 @@ const { test, expect, beforeEach, describe } = require('@playwright/test')
     headless: false,
     slowMo: 1000,
   },
-})*/
+}) */
 
 describe('Blog app', () => {
   beforeEach(async ({ page, request }) => {
@@ -72,16 +72,20 @@ describe('Blog app', () => {
 
     test('liking a blog possible', async ({ page }) => {
       await page.click('button:has-text("new blog")')
-      await page.fill('input[placeholder="title"]', 'Next Best Blog')
+      await page.fill('input[placeholder="title"]', 'Too good blog')
       await page.fill('input[placeholder="author"]', 'Mr. Almost Perfect')
       await page.fill('input[placeholder="url"]', 'www.blog2.com')
       await page.click('button[type="submit"]')
+
+      const newBlog = await page.locator('.blog').filter({ hasText: 'Too good blog Mr. Almost Perfect' }).first()
+      await expect(newBlog).toBeVisible()
         
-      const viewButton = await page.locator('button', { hasText: 'view' }).first()
+      const viewButton = newBlog.locator('button:has-text("view")')
       await viewButton.click()
   
-      const likeButton = await page.locator('button', { hasText: 'like' }).first()
-      const likesCount = await page.locator('.blog-likes').first()
+      const likeButton = newBlog.locator('button:has-text("like")')
+      const likesCount = newBlog.locator('.blog-likes')
+      await expect(likesCount).toBeVisible()
         
       const initialLikesText = await likesCount.innerText()
       const initialLikes = parseInt(initialLikesText.split(' ')[0])
