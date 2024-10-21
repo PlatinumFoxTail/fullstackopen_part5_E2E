@@ -1,5 +1,12 @@
 const { test, expect, beforeEach, describe } = require('@playwright/test')
 
+/*test.use({
+  launchOptions: {
+    headless: false,
+    slowMo: 1000,
+  },
+})*/
+
 describe('Blog app', () => {
   beforeEach(async ({ page, request }) => {
     await request.post('http://localhost:3003/api/testing/reset')
@@ -83,71 +90,33 @@ describe('Blog app', () => {
       
       await expect(likesCount).toContainText(`${initialLikes + 1} likes`)
     })
-    test('a user can delete own created blogs', async ({ page }) => {
-      console.log("Start test for deleting blog.")
-      
-      //creating a new blog
+
+    test('removing a blog is possible if the user created it', async ({ page }) => {
       await page.click('button:has-text("new blog")')
-      console.log("Clicking 'new blog' button.")
-      
-      await page.fill('input[placeholder="title"]', 'BS Blog')
-      await page.fill('input[placeholder="author"]', 'Mr. BS')
-      await page.fill('input[placeholder="url"]', 'www.bsblog.com')
+      await page.fill('input[placeholder="title"]', 'Forget blog')
+      await page.fill('input[placeholder="author"]', 'Mr. Remove')
+      await page.fill('input[placeholder="url"]', 'www.remove.com')
       await page.click('button[type="submit"]')
-      console.log("Filled in blog details and submitted the blog.")
       
-      //ensuring blog is visible and created
-      const createdBlog = await page.locator('.blog-summary', { hasText: 'BS Blog Mr. BS' }).first()
-      await expect(createdBlog).toBeVisible()
-      console.log("Created blog visible:", await createdBlog.isVisible())
-      
-      //veriifying that view button is visible and can click it
-      const viewButton = createdBlog.locator('button:has-text("view")')
-      const isViewButtonVisible = await viewButton.isVisible()
-      console.log("'view' button visible?:", isViewButtonVisible)
-      
-      if (!isViewButtonVisible) {
-        console.error("View button not visible")
-        throw new Error("View button not visible.")
-      }
-      
+      const blog = await page.locator('.blog-summary').filter({ hasText: 'Forget blog Mr. Remove' }).first()
+      await expect(blog).toBeVisible()
+
+      const viewButton = blog.locator('button:has-text("view")')
       await viewButton.click()
-      console.log("Clicking'view' button to see blog details.")
-      
-      //wait to ensure blog details rendered
-      await page.waitForTimeout(1000)
-      
-      //ensure that blog details with the remove button is visible
-      const blogDetails = createdBlog.locator('.blog-details')
-      const isDetailsVisible = await blogDetails.isVisible()
-      console.log("Blog details visible after clicking 'view'?:", isDetailsVisible)
-      
-      if (!isDetailsVisible) {
-        console.error("Blog details are not visible after clicking 'view'")
-        throw new Error("Blog details are not visible.")
-      }
-      
-      await expect(blogDetails).toBeVisible()
-      
-      //click remove button
-      const deleteButton = blogDetails.locator('button:has-text("remove")')
-      await expect(deleteButton).toBeVisible()
-      console.log("Delete button is visible:", await deleteButton.isVisible())
-      
-      //handle confirmation dialog
+
       page.once('dialog', async dialog => {
-        console.log("Dialog message:", dialog.message())
-        await expect(dialog.message()).toContain('Remove blog BS Blog by Mr. BS?')
+        console.log('Dialog message:', dialog.message())
+        expect(dialog.message()).toContain('Remove blog Forget blog by Mr. Remove?')
         await dialog.accept()
+        console.log('Dialog accepted')
       })
-      
-      await deleteButton.click()
-      console.log("Clicked the 'remove' button.")
-      
-      //check blog has been created
-      const deletedBlog = await page.locator('.blog-summary').filter({ hasText: 'BS Blog Mr. BS' })
-      await expect(deletedBlog).toHaveCount(0)
-      console.log("Deleted blog is no longer visible.")
+  
+      const removeButton = await page.locator('button', { hasText: 'remove' })
+      await removeButton.click()
+      console.log('remove button clicked')
+
+      await expect(blog).not.toBeVisible()
+      console.log('Blog removed')
     })
   })
 })
