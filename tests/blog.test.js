@@ -5,7 +5,70 @@ const { test, expect, beforeEach, describe } = require('@playwright/test')
     headless: false,
     slowMo: 1000,
   },
-}) */
+})*/
+
+test('remove button not seen by user, that did not create the blog', async ({ page, request }) => {
+  //resetting database
+  await request.post('http://localhost:3003/api/testing/reset')
+
+  //mluukkai user created
+  await request.post('http://localhost:3003/api/users', {
+    data: {
+      name: 'Matti Luukkainen',
+      username: 'mluukkai',
+      password: 'salainen'
+    }
+  })
+
+  //mluukkai loggin in
+  await page.goto('http://localhost:5173')
+  await page.fill('input[name="Username"]', 'mluukkai')
+  await page.fill('input[name="Password"]', 'salainen')
+  await page.click('button[type="submit"]')
+
+  //mluukkai crating blog
+  await page.click('button:has-text("new blog")')
+  await page.fill('input[placeholder="title"]', 'My secret blog')
+  await page.fill('input[placeholder="author"]', 'Mr. Secret')
+  await page.fill('input[placeholder="url"]', 'www.secret.com')
+  await page.click('button[type="submit"]')
+
+  const newBlog = await page.locator('.blog').filter({ hasText: 'My secret blog Mr. Secret' }).first()
+  await expect(newBlog).toBeVisible()
+
+  //log out mluukkai
+  await page.click('button:has-text("logout")')
+
+  //curiousape user created
+  const response = await request.post('http://localhost:3003/api/users', {
+    data: {
+      name: 'George Curious',
+      username: 'curiousape',
+      password: 'password123'
+    }
+  })
+
+  console.log('user creation response status:', response.status())
+  console.log('user creation response body:', await response.body())
+
+  //logging in curiousape
+  await page.goto('http://localhost:5173')
+  await page.fill('input[name="Username"]', 'curiousape')
+  await page.fill('input[name="Password"]', 'password123')
+  await page.click('button[type="submit"]')
+
+  //curiouspae searching for blog created by mluukkai
+  const blogCuriousApe = await page.locator('.blog').filter({ hasText: 'My secret blog Mr. Secret' }).first()
+  await expect(blogCuriousApe).toBeVisible()
+
+  const viewButton = blogCuriousApe.locator('button:has-text("view")')
+  await viewButton.click()
+
+  //checking remove button not visible for curiousape
+  const removeButton = blogCuriousApe.locator('button:has-text("remove")')
+  await expect(removeButton).toHaveCount(0)
+})
+
 
 describe('Blog app', () => {
   beforeEach(async ({ page, request }) => {
@@ -121,6 +184,6 @@ describe('Blog app', () => {
 
       await expect(blog).not.toBeVisible()
       console.log('Blog removed')
-    })
+    })  
   })
 })
